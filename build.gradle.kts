@@ -57,6 +57,7 @@ data class PluginDef(
     val version: String,
     val jarName: String?,
     val scriptName: String?,
+    val phoenixName: String?,
 )
 
 val pluginRoots = listOf("plugins", "themes")
@@ -69,7 +70,7 @@ val pluginDefs = pluginRoots.flatMap { file(it).listFiles().orEmpty().sortedBy(F
         val id = manifest.str("id") ?: return@mapNotNull null
         val version = manifest.str("version") ?: return@mapNotNull null
         val dist = manifest.obj("dist").orEmpty()
-        PluginDef(dir, id, version, dist.obj("android")?.str("path"), dist.str("script"))
+        PluginDef(dir, id, version, dist.obj("android")?.str("path"), dist.str("script"), dist.str("phoenix"))
     }
 
 // ---------------------------------------------------------------------------------------------
@@ -307,7 +308,7 @@ fun taskSuffix(dirName: String): String =
     dirName.split(Regex("[^A-Za-z0-9]")).filter(String::isNotEmpty)
         .joinToString("") { it.replaceFirstChar(Char::uppercase) }
 
-val buildJsTasks = pluginDefs.filter { it.scriptName != null }.associate { def ->
+val buildJsTasks = pluginDefs.filter { it.scriptName != null || it.phoenixName != null }.associate { def ->
     val name = def.dir.name
     val task = tasks.register("buildJs${taskSuffix(name)}") {
         group = "valenced"
@@ -320,6 +321,7 @@ val buildJsTasks = pluginDefs.filter { it.scriptName != null }.associate { def -
         // Everything this plugin's bundle can be built from.
         inputs.files(fileTree(def.dir) { exclude("build/**", "src/**") }).withPropertyName("sources")
         outputs.dir(File(def.dir, "build/js")).withPropertyName("bundle")
+        outputs.dir(File(def.dir, "build/phoenix")).withPropertyName("phoenixBundle")
 
         doLast {
             val tool = jsToolOrWarn() ?: return@doLast
@@ -351,7 +353,7 @@ val packageAllPlugins = tasks.register("packageAllPlugins") {
     description = "Builds and packages every plugin into build/dist/<id>@<version>.zip."
 }
 
-pluginDefs.forEach { (dir, id, version, jarName, scriptName) ->
+pluginDefs.forEach { (dir, id, version, jarName, scriptName, phoenixName) ->
     val pkg = tasks.register<Zip>("package${taskSuffix(dir.name)}") {
         group = "valenced"
         description = "Packages '$id' into a distributable ZIP."
@@ -373,6 +375,17 @@ pluginDefs.forEach { (dir, id, version, jarName, scriptName) ->
             from(File(dir, "build/js")) {
                 include("index.js")
                 rename { scriptName }
+            }
+        }
+
+        if (phoenixName != null) {
+            // A file already at the dist.phoenix path is hand-written, and the CLI does not rebuild it
+            val handWritten = File(dir, phoenixName)
+            if (handWritten.isFile) from(handWritten) { into(File(phoenixName).parent ?: "") }
+            else from(File(dir, "build/phoenix")) {
+                include("index.js")
+                rename { File(phoenixName).name }
+                into(File(phoenixName).parent ?: "")
             }
         }
 

@@ -15,16 +15,18 @@ export default plugin({
 	init() {},
 
 	// Runs during the AppRegistry.runApplication call. All APIs are available.
-	start() {
+	start({ settings }) {
 		// See `logcat | grep ReactNativeJS` on Android.
 		console.log('[plugin] JS started')
 
 		callNativeMethod('com.example.plugin.ping', [])
-		callNativeMethod('com.example.plugin.alert', [
-			'Hello',
-			'This is an alert from the plugin!',
-			'Close',
-		])
+		// Settings are declared in manifest.json, and Valenced renders them.
+		if (settings.get<boolean>('showAlert'))
+			callNativeMethod('com.example.plugin.alert', [
+				settings.get<string>('alertTitle'),
+				'This is an alert from the plugin!',
+				'Close',
+			])
 	},
 
 	stop() {

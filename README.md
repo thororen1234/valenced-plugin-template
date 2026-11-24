@@ -3,11 +3,12 @@
 This repository is a starter monorepo for external Valenced plugins. Each plugin becomes one ZIP
 file. One repository can hold any number of plugins under `plugins/`, and theme plugins under `themes/`.
 
-A plugin has up to three parts. Its own `manifest.json` declares all of them:
+A plugin has up to four parts. Its own `manifest.json` declares all of them:
 
 - **`dist.android`** is native Kotlin code. The build compiles it to a DEXed JAR, and the plugin loader loads it with `DexClassLoader`.
   This code runs early, before the JS bundle.
 - **`dist.script`** is the JavaScript bundle. The Valenced JS side runs it.
+- **`dist.phoenix`** is a prebuilt Phoenix JavaScript bundle. Place it at the path named in the manifest; Gradle packages it as-is. The template CLI only builds `dist.script`.
 
 ## Layout
 
@@ -138,8 +139,12 @@ packages `assets/` into the ZIP.
     "valenced.api": { "version": ">=1" },
     "discord": { "version": "*" }
   },
+  "settings": [                     // optional, see `settings` below
+    { "key": "showAlert", "type": "switch", "label": "Show alert on start", "default": true }
+  ],
   "dist": {
     "script": "index.js",           // relative to the plugin folder
+    "phoenix": "phoenix.js",        // optional prebuilt Phoenix bundle, relative to the plugin folder
     "android": {
       "path": "plugin.jar",         // relative to the plugin folder
       "class": "com.example.plugin.MyPlugin"  // the class that exposes the `plugin {}` val
@@ -235,6 +240,13 @@ Two dependency IDs are reserved.
 - **`valenced.api`** resolves to the Valenced release version, which is the plugin API version.
   This dependency is **mandatory**. Constrain it to the API versions you tested, for example `">=1 <2"`.
 - **`discord`** resolves to the Discord app version, for example `>=355.0`.
+
+### `settings`
+
+Valenced renders the settings declared here in both React Native and Phoenix, and stores their values.
+The types are `switch`, `text`, `number`, `select`, `color`, `list` and `object`.
+Read them with `api.settings` in JS and `settings` in Kotlin. `example-plugin` shows a switch and a text field.
+See the [settings docs](https://valenced.app/docs/plugin-development/api-reference/settings) for every field.
 
 ## Native plugins
 

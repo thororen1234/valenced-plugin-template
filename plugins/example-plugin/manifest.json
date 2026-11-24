@@ -17,6 +17,25 @@
 			"version": "*"
 		}
 	},
+	"settings": [
+		{
+			"key": "showAlert",
+			"type": "switch",
+			"label": "Show alert on start",
+			"default": true
+		},
+		{
+			"key": "alertTitle",
+			"type": "text",
+			"label": "Alert title",
+			"default": "Hello",
+			"maxLength": 32,
+			"showIf": {
+				"key": "showAlert",
+				"equals": true
+			}
+		}
+	],
 	"dist": {
 		"script": "index.js",
 		"android": {
